@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f8eef4">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="Regolo Ostetrico">
+<title>Regolo Ostetrico Pro</title>
+<style>
+:root{--pink:#d95f91;--pink2:#f7e3ec;--blue:#67a9d3;--blue2:#e6f3fb;--ink:#263238;--muted:#66747d}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#faf8fa;color:var(--ink)}
+.wrap{max-width:720px;margin:auto;padding:18px 16px 40px}.hero{background:linear-gradient(135deg,var(--pink2),var(--blue2));border-radius:24px;padding:20px;box-shadow:0 8px 25px #00000010}
+h1{font-size:26px;margin:0 0 5px}.sub{color:var(--muted);font-size:14px}.card{background:white;border-radius:20px;padding:18px;margin-top:14px;box-shadow:0 5px 18px #0000000c}
+h2{font-size:18px;margin:0 0 14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.result{padding:13px;border-radius:15px;background:#f5f7f8}.result b{display:block;font-size:20px;margin-top:4px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}input,select{width:100%;font:inherit;font-size:17px;padding:12px;border:1px solid #d9dfe3;border-radius:12px;background:#fff}
+button{width:100%;border:0;border-radius:14px;padding:13px;margin-top:14px;font:inherit;font-weight:700;font-size:16px;background:var(--pink);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.answer{margin-top:14px;padding:15px;border-radius:15px;background:var(--blue2);text-align:center}.answer strong{font-size:24px;color:#24698f}
+.exam{padding:10px 0;border-bottom:1px solid #eee}.exam:last-child{border:0}.exam b{color:#7e3153}.small{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.4}
+@media(max-width:430px){.grid{grid-template-columns:1fr 1fr}.wrap{padding:12px}.hero{padding:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <div class="hero">
+   <h1>Regolo Ostetrico Pro</h1>
+   <div class="sub">Calcolo diretto e inverso dell'epoca gestazionale</div>
+ </div>
+
+ <div class="card">
+  <h2>Da ultima mestruazione</h2>
+  <label>Data ultima mestruazione (LMP)</label>
+  <input id="lmp" type="date">
+  <label>Data di riferimento</label>
+  <input id="ref" type="date">
+  <button onclick="calculate()">Calcola</button>
+  <div class="grid" style="margin-top:14px">
+   <div class="result">Epoca gestazionale<b id="ga">—</b></div>
+   <div class="result">Epoca concezionale<b id="ca">—</b></div>
+   <div class="result">DPP<b id="edd">—</b></div>
+   <div class="result">Concepimento teorico<b id="conc">—</b></div>
+  </div>
+ </div>
+
+
+ <div class="card">
+  <h2>Da epoca gestazionale nota</h2>
+  <div class="sub">Utile quando LMP e DPP non sono note, ma è nota l'epoca gestazionale a una certa data.</div>
+  <label>Data in cui l'epoca gestazionale è nota</label>
+  <input id="knownDate" type="date">
+  <div class="two">
+   <div><label>Settimane</label><input id="knownWeeks" type="number" min="0" max="44" value="17"></div>
+   <div><label>Giorni</label><input id="knownDays" type="number" min="0" max="6" value="3"></div>
+  </div>
+  <button onclick="knownGAToDating()">Ricostruisci datazione</button>
+  <div class="grid" style="margin-top:14px">
+   <div class="result">LMP teorica<b id="knownLMP">—</b></div>
+   <div class="result">DPP calcolata<b id="knownEDD">—</b></div>
+  </div>
+  <div class="answer">Alla data scelta: <strong id="knownGALabel">17+3</strong></div>
+  <button onclick="useKnownDating()" style="background:var(--blue)">Usa questa datazione nel regolo</button>
+ </div>
+
+ <div class="card">
+  <h2>Calcolo inverso: settimane → data</h2>
+  <div class="two">
+   <div><label>Settimane</label><input id="weeks" type="number" min="0" max="44" value="20"></div>
+   <div><label>Giorni</label><input id="days" type="number" min="0" max="6" value="0"></div>
+  </div>
+  <button onclick="reverseCalc()">Trova data di calendario</button>
+  <div class="answer"><span id="gaLabel">20+0</span> corrisponde a<br><strong id="calendarDate">—</strong></div>
+ </div>
+
+ <div class="card">
+  <h2>Data → epoca gestazionale</h2>
+  <label>Data da verificare</label>
+  <input id="checkDate" type="date">
+  <button onclick="dateToGA()">Calcola epoca</button>
+  <div class="answer"><strong id="checkGA">—</strong></div>
+ </div>
+
+ <div class="card">
+  <h2>Finestre ostetriche</h2>
+  <div id="exams">Inserisci la data dell'ultima mestruazione e premi Calcola.</div>
+ </div>
+
+ <div class="small">Strumento di supporto al calcolo. Le date derivano dalla LMP con DPP teorica a 40+0 (280 giorni). Le finestre cliniche vanno adattate ai protocolli adottati e al singolo caso.</div>
+</div>
+<script>
+const DAY=86400000;
+
+let reconstructedLMP = null;
+function dateInputValue(d){
+ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+ return `${y}-${m}-${day}`;
+}
+function knownGAToDating(){
+ const kd=parseDate(document.getElementById('knownDate').value);
+ const w=parseInt(document.getElementById('knownWeeks').value||0);
+ const d=parseInt(document.getElementById('knownDays').value||0);
+ if(!kd){alert("Inserisci la data in cui l'epoca gestazionale è nota.");return}
+ if(w<0||w>44||d<0||d>6){alert("Usa settimane 0–44 e giorni 0–6.");return}
+ reconstructedLMP=addDays(kd,-(w*7+d));
+ const edd=addDays(reconstructedLMP,280);
+ document.getElementById('knownLMP').textContent=fmt(reconstructedLMP);
+ document.getElementById('knownEDD').textContent=fmt(edd);
+ document.getElementById('knownGALabel').textContent=w+"+"+d;
+}
+function useKnownDating(){
+ if(!reconstructedLMP){knownGAToDating(); if(!reconstructedLMP)return;}
+ document.getElementById('lmp').value=dateInputValue(reconstructedLMP);
+ calculate();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function parseDate(v){ if(!v)return null; const [y,m,d]=v.split('-').map(Number); return new Date(y,m-1,d,12); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmt(d){ return new Intl.DateTimeFormat('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d); }
+function diffDays(a,b){ return Math.round((a-b)/DAY); }
+function gaText(n){ if(n<0)return "non ancora iniziata"; return Math.floor(n/7)+"+"+(n%7); }
+function getLMP(){ return parseDate(document.getElementById('lmp').value); }
+function calculate(){
+ const l=getLMP(), r=parseDate(document.getElementById('ref').value);
+ if(!l){alert("Inserisci la data dell'ultima mestruazione.");return}
+ const dd=r?diffDays(r,l):null;
+ document.getElementById('ga').textContent=r?gaText(dd):"—";
+ document.getElementById('ca').textContent=r?gaText(dd-14):"—";
+ document.getElementById('edd').textContent=fmt(addDays(l,280));
+ document.getElementById('conc').textContent=fmt(addDays(l,14));
+ renderExams(l); reverseCalc();
+}
+function reverseCalc(){
+ const l=getLMP(); if(!l){alert("Inserisci prima la data dell'ultima mestruazione.");return}
+ let w=parseInt(document.getElementById('weeks').value||0), d=parseInt(document.getElementById('days').value||0);
+ if(w<0||w>44||d<0||d>6){alert("Usa settimane 0–44 e giorni 0–6.");return}
+ const target=addDays(l,w*7+d);
+ document.getElementById('gaLabel').textContent=w+"+"+d;
+ document.getElementById('calendarDate').textContent=fmt(target);
+}
+function dateToGA(){
+ const l=getLMP(), t=parseDate(document.getElementById('checkDate').value);
+ if(!l||!t){alert("Inserisci LMP e data da verificare.");return}
+ document.getElementById('checkGA').textContent=gaText(diffDays(t,l))+" settimane";
+}
+const windows=[
+ ["Translucenza nucale","11+0","13+6",77,97],
+ ["Villocentesi","11+0","13+0",77,91],
+ ["Morfologica","19+0","21+0",133,147],
+ ["Curva glicemica","24+0","28+0",168,196],
+ ["Anti-D (se indicata)","28+0","28+0",196,196],
+ ["Ecografia accrescimento","30+0","32+0",210,224],
+ ["Tampone GBS","36+0","37+6",252,265]
+];
+function renderExams(l){
+ document.getElementById('exams').innerHTML=windows.map(x=>{
+  const a=fmt(addDays(l,x[3])), b=fmt(addDays(l,x[4]));
+  return `<div class="exam"><b>${x[0]}</b><br>${x[1]} → ${x[2]} &nbsp; • &nbsp; ${a}${a===b?"":" → "+b}</div>`;
+ }).join("");
+}
+(function init(){
+ const now=new Date(), y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0'), d=String(now.getDate()).padStart(2,'0');
+ const s=`${y}-${m}-${d}`; document.getElementById('ref').value=s; document.getElementById('checkDate').value=s; document.getElementById('knownDate').value=s;
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+}
+</script>
+</body>
+</html>
